@@ -14,6 +14,7 @@
   ],
   "scripts": {
     "build": "medusa build",
+    "both": "concurrently --kill-others \"cd ../ess-store-frontend && npm run dev\" \" npm run dev\"",
     "seed": "medusa exec ./src/scripts/seed.ts",
     "start": "medusa start",
     "dev": "medusa develop",
