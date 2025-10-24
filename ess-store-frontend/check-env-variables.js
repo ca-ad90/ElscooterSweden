@@ -1,5 +1,5 @@
-const c = require("ansi-colors")
 
+import c from "ansi-colors"
 const requiredEnvs = [
   {
     key: "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY",
@@ -35,5 +35,4 @@ function checkEnvVariables() {
     process.exit(1)
   }
 }
-
-module.exports = checkEnvVariables
+export default checkEnvVariables

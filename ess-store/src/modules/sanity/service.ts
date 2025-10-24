@@ -73,26 +73,40 @@ class SanityModuleService {
         return {
             _type: this.typeMap[SyncDocumentTypes.PRODUCT],
             _id: product.id,
-            name: product.title,
+            title: product.title,
             specs: [
                 {
                     _key: product.id,
                     _type: "spec",
                     title: product.title,
+                    content: product.description,
                     lang: "en",
                 },
             ],
         };
     };
     private transformProductForUpdate = (product: ProductDTO) => {
+        //console.log("transformProductForUpdate", product.sanity_product.specs);
+
         return {
-            set: { title: product.title },
+            set: {
+                title: product.title,
+                specs: [
+                    {
+                        _key: product.id,
+                        _type: "spec",
+                        title: product.title,
+                        content: product.description,
+                    },
+                ],
+            },
         };
     };
     async upsertSyncDocument<T extends SyncDocumentTypes>(
         type: T,
         data: SyncDocumentInputs<T>,
     ) {
+        console.log("---BREAK??---");
         const existing = await this.client.getDocument(data.id);
         if (existing) {
             return await this.updateSyncDocument(type, data);
@@ -105,6 +119,9 @@ class SanityModuleService {
         data: SyncDocumentInputs<T>,
         options?: FirstDocumentMutationOptions,
     ) {
+        console.log("CREATE SYNC DOCUMENT");
+        console.log("data", data);
+        console.log("options", options);
         const doc = this.createTransformationMap[type](data);
         return await this.client.create(doc, options);
     }
@@ -113,6 +130,9 @@ class SanityModuleService {
         data: SyncDocumentInputs<T>,
     ) {
         const operations = this.updateTransformationMap[type](data);
+        console.log("UPSERT SYNC DOCUMENT");
+        console.log("data", data);
+        console.log("operations", operations);
         return await this.client.patch(data.id, operations).commit();
     }
     async retrieve(id: string) {
