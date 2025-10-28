@@ -1,0 +1,79 @@
+
+// 6. THEME
+// Defines semantic colors using CSS Variables for easy
+// switching (e.g., light/dark mode) in React.
+
+:root {
+  // --- Light Theme (Default) ---
+
+  // Brand
+  --color-primary: #{$color-moss-500};
+  --color-primary-fg: #{$color-moss-100}; // Foreground text on primary
+  --color-secondary: #{$color-orange-500};
+  --color-secondary-fg: #{$color-orange-100}; // Foreground text on secondary
+  --color-accent: #{$color-orange-600};
+  --color-accent-fg: #{$color-orange-100};
+
+  // Semantic
+  --color-success: #{$color-green};
+  --color-success-fg: #{$color-moss-950};
+  --color-warning: #{$color-yellow};
+  --color-warning-fg: #{$color-moss-200};
+  --color-error: #{$color-red};
+  --color-error-fg: #{$color-moss-950};
+  --color-info: #{$color-blue};
+  --color-info-fg: #{$color-moss-950};
+
+  // UI
+  --color-background: #{$color-moss-950}; // Page background
+  --color-surface: #{$color-moss-900}; // Card, modal, etc. background
+  --color-surface-alt: #{$color-moss-800}; // Slightly darker surface
+
+  // Text
+  --color-text: #{$color-moss-200}; // Main text
+  --color-text-muted: #{$color-moss-300}; // Muted text
+  --color-text-subtle: #{$color-moss-400}; // Subtle text (placeholders)
+  --color-text-inverted: #{$color-moss-950}; // Text on dark backgrounds
+
+  // Borders & Dividers
+  --color-border: #{$color-moss-700};
+  --color-border-hover: #{$color-moss-500};
+}
+
+// --- Dark Mode ---
+// Swapped variables for dark theme.
+// Enable in React by setting <body data-theme="dark">
+[data-theme="dark"] {
+  // Brand
+  --color-primary: #{$color-moss-500};
+  --color-primary-fg: #{$color-moss-100};
+  --color-secondary: #{$color-orange-500};
+  --color-secondary-fg: #{$color-orange-100};
+  --color-accent: #{$color-orange-600};
+  --color-accent-fg: #{$color-orange-100};
+
+  // Semantic (often stays the same, or slightly desaturated)
+  --color-success: #{$color-green};
+  --color-success-fg: #{$color-moss-950};
+  --color-warning: #{$color-yellow};
+  --color-warning-fg: #{$color-moss-200};
+  --color-error: #{$color-red};
+  --color-error-fg: #{$color-moss-950};
+  --color-info: #{$color-blue};
+  --color-info-fg: #{$color-moss-950};
+
+  // UI
+  --color-background: #{$color-moss-100}; // Page background
+  --color-surface: #{$color-moss-200}; // Card, modal, etc. background
+  --color-surface-alt: #{$color-moss-300}; // Slightly lighter surface
+
+  // Text
+  --color-text: #{$color-moss-800}; // Main text
+  --color-text-muted: #{$color-moss-600}; // Muted text
+  --color-text-subtle: #{$color-moss-500}; // Subtle text (placeholders)
+  --color-text-inverted: #{$color-moss-100}; // Text on light backgrounds
+
+  // Borders & Dividers
+  --color-border: #{$color-moss-300};
+  --color-border-hover: #{$color-moss-500};
+}

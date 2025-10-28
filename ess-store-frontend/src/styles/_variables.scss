@@ -1,0 +1,114 @@
+
+// 1. SETTINGS / PRIMITIVES
+// This file contains raw, non-contextual values (the "atoms" of the design system).
+// It should not output any CSS.
+
+// --- Brand Colors ---
+
+// Primary: Moss
+$color-moss-100: #0B0C08;
+$color-moss-200: #333927;
+$color-moss-300: #596447;
+$color-moss-400: #818E69;
+$color-moss-500: #A4B18B;
+$color-moss-600: #BBC9A4;
+$color-moss-700: #D1DCBD;
+$color-moss-800: #E2EAD5;
+$color-moss-900: #F2F5ED;
+$color-moss-950: #FAFBF9;
+
+// Secondary: Orange
+$color-orange-100: #201408;
+$color-orange-200: #533517;
+$color-orange-300: #865627;
+$color-orange-400: #BC7E42;
+$color-orange-500: #DF9D5D;
+$color-orange-600: #EEB781;
+$color-orange-700: #F4CAA3;
+$color-orange-800: #F5DEC7;
+$color-orange-900: #F6EFE9;
+$color-orange-950: #FDFCFC;
+
+// --- Semantic Primitives ---
+// Base colors for semantic meanings (success, error, etc.)
+$color-green: #4CAF50;
+$color-red: #F44336;
+$color-yellow: #FFC107;
+$color-blue: #2196F3;
+$color-grey-500: #9e9e9e;
+
+// --- Typography ---
+$font-main: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+$font-complementary: "Roboto Condensed", -apple-system, sans-serif;
+$font-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+// --- Sizing (Static) ---
+// Use `rem` units, based on a 16px root font size.
+// Ideal for layout, margins, padding, and fixed component sizes.
+$size-static-map: (
+  xxs: 0.25rem, // 4px
+  xs: 0.5rem, // 8px
+  sm: 0.75rem, // 12px
+  md: 1rem, // 16px
+  lg: 1.5rem, // 24px
+  xl: 2rem, // 32px
+  xxl: 3rem // 48px
+);
+
+// --- Sizing (Dynamic) ---
+// Use `em` units, relative to the element's own font-size.
+// Ideal for spacing *within* a component (e.g., padding on a button)
+// or for elements whose size should scale with their text.
+$size-dynamic-map: (
+  xxs: 0.25em,
+  xs: 0.5em,
+  sm: 0.75em,
+  md: 1em,
+  lg: 1.5em,
+  xl: 2em,
+  xxl: 3em
+);
+
+// --- Breakpoints ---
+// Matches Tailwind's default `min-width` breakpoints for `respond` mixin.
+$breakpoints: (
+  sm: 640px,
+  md: 768px,
+  lg: 1024px,
+  xl: 1280px,
+  '2xl': 1536px
+);
+
+// --- Animation & Transitions ---
+// Timing Functions
+$ease-in: cubic-bezier(0.4, 0, 1, 1);
+$ease-out: cubic-bezier(0, 0, 0.2, 1);
+$ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+$ease-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+$ease-smooth: cubic-bezier(0.33, 1, 0.68, 1); // Ease-out quint
+
+// Durations
+$transition-fast: 150ms;
+$transition-medium: 300ms;
+$transition-slow: 500ms;
+
+// Keyframe Names (referenced in _animations.scss and mixins)
+$anim-fade-in: "anim-fade-in";
+$anim-slide-in-up: "anim-slide-in-up";
+$anim-scale-in: "anim-scale-in";
+$anim-rotate-cw: "anim-rotate-cw";
+
+// --- Layers (Z-Index) ---
+$z-layers: (
+  hide: -1,
+  base: 0,
+  content: 1,
+  dropdown: 1000,
+  sticky: 1020,
+  header: 1030,
+  modal-backdrop: 1040,
+  modal: 1050,
+  popover: 1060,
+  tooltip: 1070,
+  toast: 1080
+);

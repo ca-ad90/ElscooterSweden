@@ -1,0 +1,23 @@
+// 5. GENERIC / RESET
+// Minimal reset to complement Tailwind's `preflight.css`.
+// Preflight handles most normalization. This is for global opinions.
+
+*,
+*::before,
+*::after {
+  // Ensure border-box is inherited. Preflight sets this, but
+  // this ensures plugins/components don't override it.
+  box-sizing: inherit;
+}
+
+html {
+  // Set global box-sizing
+  box-sizing: border-box;
+
+  // Standardize font smoothing
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  // Prevent text size inflation on mobile
+  -webkit-text-size-adjust: 100%;
+}
