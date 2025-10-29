@@ -1,0 +1,33 @@
+@use "sass:color";
+
+// 8. LAYOUT
+// Global layout classes. Tailwind handles most layout, so this
+// should be for reusable, structural components.
+
+// Example: A centered page container that you might apply
+// to a <main> element or a wrapper div.
+.page-container {
+  width: 100%;
+  max-width: 1280px; // Corresponds to `xl` breakpoint
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: size-static(md);
+  padding-right: size-static(md);
+
+  @include respond(sm) {
+    padding-left: size-static(lg);
+    padding-right: size-static(lg);
+  }
+}
+
+// Example: A main content area vs. a sidebar
+.main-content {
+  // Styles for the main content block
+  flex-grow: 1;
+}
+
+.sidebar {
+  // Styles for a sidebar
+  flex-shrink: 0;
+  width: 300px;
+}

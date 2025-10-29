@@ -1,0 +1,65 @@
+
+// 2. TOOLS / FUNCTIONS
+// Helper functions to compute values.
+// Must be imported after _variables.scss.
+
+@use "sass:math";
+
+// Converts a unitless pixel value to rem.
+@function rem($px, $base: 16) {
+  @return math.div(math.floor(math.div($px, $base) * 100rem),100);
+}
+
+// Strips the unit from a number.
+@function strip-unit($number) {
+  @if type-of($number) == "number" and not math.is-unitless($number) {
+    @return math.div($number, $number * 0 + 1);
+  }
+  @return $number;
+}
+
+// Generates a fluid typography `calc()` function.
+// e.g., @include fluid-typo(320, 1280, 16, 24);
+@function fluid-typo($min-vw, $max-vw, $min-fs, $max-fs) {
+  $min-vw-rem: rem($min-vw);
+  $max-vw-rem: rem($max-vw);
+  $min-fs-rem: rem($min-fs);
+  $max-fs-rem: rem($max-fs);
+
+  $slope: math.div(strip-unit($max-fs-rem) - strip-unit($min-fs-rem), strip-unit($max-vw-rem) - strip-unit($min-vw-rem));
+  $y-intercept: $min-fs-rem - $slope * $min-vw-rem;
+
+  @return clamp(#{$min-fs-rem}, #{$slope * 100}vw + #{$y-intercept}, #{$max-fs-rem});
+}
+
+// Helper to get a z-index value from the layers map.
+@function z($layer) {
+  @if not map-has-key($z-layers, $layer) {
+    @warn "Z-index layer '#{$layer}' not found in $z-layers.";
+    @return null;
+  }
+  @return map-get($z-layers, $layer);
+}
+
+// Helper for adding alpha to a color.
+@function alpha($color, $opacity) {
+  @return rgba($color, $opacity);
+}
+
+// Helper to get static size from map.
+@function size-static($key) {
+  @if not map-has-key($size-static-map, $key) {
+    @warn "Static size '#{$key}' not found in $size-static-map.";
+    @return null;
+  }
+  @return map-get($size-static-map, $key);
+}
+
+// Helper to get dynamic size from map.
+@function size-dynamic($key) {
+  @if not map-has-key($size-dynamic-map, $key) {
+    @warn "Dynamic size '#{$key}' not found in $size-dynamic-map.";
+    @return null;
+  }
+  @return map-get($size-dynamic-map, $key);
+}

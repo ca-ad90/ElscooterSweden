@@ -1,0 +1,105 @@
+
+// MAIN.SCSS
+// This is the single entry point for your SCSS.
+// It imports all partials in the correct order.
+// This is the only file that should be compiled to CSS.
+
+// 1. SETTINGS: Raw variables, maps, and settings.
+@import "variables";
+
+// 2. TOOLS: Functions and mixins that require variables.
+@import "functions";
+
+// 3. DEFINITIONS: Global @keyframes.
+@import "animations";
+
+// 4. TOOLS (continued): Mixins that may depend on keyframes.
+@import "mixins";
+
+// 5. GENERIC: Reset and/or normalize styles.
+@import "reset";
+
+// 6. THEME: CSS Variables for light/dark theming.
+@import "theme";
+
+// 7. BASE: Base HTML element styles (h1, p, a, etc.).
+@import "typography";
+
+// 8. LAYOUT: Global layout helper classes (.page-container, etc.).
+@import "layout";
+
+// 9. UTILITIES: Utility classes (.flow, .anim-fade-in, etc.).
+// (Note: _flow.scss is a utility file)
+@import "flow";
+
+// 10. COMPONENTS: (Optional)
+// If you have SCSS for complex components that Tailwind can't
+// easily style (e.g., a complex date picker), you would
+// import them last.
+// @import 'components/date-picker';
+// @import 'components/slider';
+@import "globals";
+@import "components/navbar";
+#hero-container {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0), 25%, rgba(0, 0, 0, 0), 75%, rgba(83, 37, 0, 0.75));
+  #myVideo {
+    filter: sepia(0.2) brightness(1) saturate(0.8);
+    position: absolute;
+    filter: sepia(0.2) brightness() saturate(0.8);
+    min-width: 100%;
+    min-height: 100%;
+    height: auto;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    margin: auto;
+    position: absolute;
+    top: -100%;
+    bottom: -100%;
+    left: -100%;
+    right: -100%;
+    top: -100%;
+    bottom: -100%;
+    left: -100%;
+    right: -100%;
+
+    margin: auto;
+
+    min-width: 100%;
+    min-height: 100%;
+  }
+  h1{
+
+    text-shadow:0px 0px 4px rgba(0, 0, 0, 0.5);
+    animation-name: rotateAnimation;
+    animation-duration: 1ms; /* Firefox requires this to apply the animation */
+    animation-direction: alternate;
+    animation-timeline: scroll(root);
+    }
+  h2{
+    text-shadow:0px 0px 4px rgba(0, 0, 0, 0.5);
+    animation-name: rotateAnimation2;
+    animation-duration: 1ms; /* Firefox requires this to apply the animation */
+    animation-direction: alternate;
+    animation-timeline: scroll(root);
+
+  }
+}
+
+
+@keyframes rotateAnimation {
+from {
+  transform: translateY(0vh);
+}
+to {
+  transform: translateY(-100px);
+}
+}
+@keyframes rotateAnimation2 {
+  from {
+    transform: translateY(0vh);
+  }
+  to {
+    transform: translateY(-80px);
+  }
+  }

@@ -5,10 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "concurrently --kill-others \"cd ess-store && npm run dev\" \"cd ess-store-frontend && npm run dev\"",
-    "install-both": "concurrently --kill-others \"cd ess-store && npm install\" \"cd ess-store-frontend && npm run install\"",
-    "dev-frontend": " cd ess-store-frontend  && npm run dev",
-    "dev-backend": " cd ess-store-frontend  && npm run dev"
+    "dev": "concurrently --kill-others \"cd ess-store && npm run dev\" \"cd web && npm run dev\" \"cd cms && npm run dev\"",
+    "dev:backend": "cd ess-store && npm run dev",
+    "dev:web": "cd web && npm run dev",
+    "dev:cms": "cd cms && npm run dev",
+    "install:all": "concurrently --kill-others \"cd ess-store && npm install\" \"cd web && npm install\" \"cd cms && npm install\""
   },
   "author": "",
   "license": "ISC"

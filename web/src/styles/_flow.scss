@@ -1,0 +1,22 @@
+@import "mixins";
+// 9. UTILITIES / FLOW
+// Provides utility classes for managing vertical rhythm (flow).
+// Complements Tailwind's `space-y-*` but is semantic.
+
+// Use: <div class="flow"> ... </div>
+// All direct children will have margin-top.
+.flow {
+  @include flow("md"); // Default flow spacing
+}
+
+// Create modifiers for different spacing sizes
+.flow-xxs { @include flow("xxs"); }
+.flow-xs { @include flow("xs"); }
+.flow-sm { @include flow("sm"); }
+.flow-lg { @include flow("lg"); }
+.flow-xl { @include flow("xl"); }
+.flow-xxl { @include flow("xxl"); }
+
+div{
+  @include flow("md");
+}

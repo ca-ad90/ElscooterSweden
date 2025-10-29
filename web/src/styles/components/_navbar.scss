@@ -1,0 +1,22 @@
+$navbarHeight: 64px;
+#navbar{
+  height: 64px;
+  width: 100%;
+  position: fixed;
+  bottom:0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background-color: $color-moss-950;
+  box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease, bottom 0.3s ease;
+}
+@media (min-width: 768px) {
+  #navbar{
+    --navbar-height: 250px;
+    position: fixed;
+    top: calc(100vh - var(--navbar-height));
+    height: var(--navbar-height);
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+}

@@ -1,0 +1,172 @@
+
+// 7. BASE / TYPOGRAPHY
+// Base styles for HTML elements like h1-h6, p, a, etc.
+// These are styles you want to apply globally.
+
+body {
+  // Use semantic CSS vars from _theme.scss
+  font-family: $font-main;
+  color: var(--color-text);
+  background-color: var(--color-background);
+}
+
+// --- Headings ---
+// Uses fluid typography for smooth scaling.
+// Viewports: 320px (mobile) to 1280px (desktop)
+// Font sizes: min to max
+
+h1,
+.h1 {
+  font-family: $font-main;
+  font-weight: 500;
+  @include fluid-type(320, 1280, 32, 56); // ~2rem to 3.5rem
+  line-height: 1.2;
+}
+
+h2,
+.h2 {
+  font-family: $font-main;
+  font-weight: 500;
+  @include fluid-type(320, 1280, 28, 40); // ~1.75rem to 2.5rem
+  line-height: 1.25;
+}
+
+h3,
+.h3 {
+  font-weight: 600;
+  @include fluid-type(320, 1280, 22, 32); // ~1.375rem to 2rem
+  line-height: 1.3;
+}
+
+h4,
+.h4 {
+  font-weight: 600;
+  @include fluid-type(320, 1280, 18, 24); // ~1.125rem to 1.5rem
+  line-height: 1.4;
+}
+
+h5,
+.h5 {
+  font-weight: 600;
+  @include fluid-type(320, 1280, 16, 20); // ~1rem to 1.25rem
+  line-height: 1.5;
+}
+
+h6,
+.h6 {
+  font-weight: 600;
+  font-size: 1rem; // No fluid scaling
+  line-height: 1.5;
+}
+
+// --- Body Text ---
+p {
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 75ch; // Improve readability
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  @include transition(color);
+
+  &:hover,
+  &:focus {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+}
+
+small {
+  font-size: 0.875rem;
+}
+
+strong {
+  font-weight: 600;
+}
+.accent-text {
+  color: var(--color-accent);
+}
+.primary-text {
+  color: var(--color-primary);
+}
+.secondary-text {
+  color: var(--color-secondary);
+}
+.success-text {
+  color: var(--color-success);
+}
+.error-text {
+  color: var(--color-error);
+}
+.font-accent {
+  font-family: $font-complementary;
+}
+.font-primary {
+  font-family: $font-main;
+}
+.font-secondary {
+  font-family: $font-complementary;
+}
+.clr-p-100 {
+  color: $color-moss-100;
+}
+.clr-p-200 {
+  color: $color-moss-200;
+}
+.clr-p-300 {
+  color: $color-moss-300;
+}
+.clr-p-400 {
+  color: $color-moss-400;
+}
+.clr-p-500 {
+  color: $color-moss-500;
+}
+.clr-p-600 {
+  color: $color-moss-600;
+}
+.clr-p-700 {
+  color: $color-moss-700;
+}
+.clr-p-800 {
+  color: $color-moss-800;
+}
+.clr-p-900 {
+  color: $color-moss-900;
+}
+.clr-p-950 {
+  color: $color-moss-950;
+}
+
+.clr-s-100 {
+  color: $color-orange-100;
+}
+.clr-s-200 {
+  color: $color-orange-200;
+}
+.clr-s-300 {
+  color: $color-orange-300;
+}
+.clr-s-400 {
+  color: $color-orange-400;
+}
+.clr-s-500 {
+  color: $color-orange-500;
+}
+.clr-s-600 {
+  color: $color-orange-600;
+}
+.clr-s-700 {
+  color: $color-orange-700;
+}
+.clr-s-800 {
+  color: $color-orange-800;
+}
+.clr-s-900 {
+  color: $color-orange-900;
+}
+.clr-s-950 {
+  color: $color-orange-950;
+}
