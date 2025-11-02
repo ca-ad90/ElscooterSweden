@@ -15,5 +15,7 @@ export default {
     { name: 'imageGallery', title: 'Image Gallery', type: 'imageGallery' },
     { name: 'price', title: 'Price', type: 'number' },
     { name: 'inStock', title: 'In Stock', type: 'boolean' },
+  { name: 'specs', title: 'Specs', type: 'array', of: [{ type: 'object', fields: [{ name: 'title', title: 'Title', type: 'string' }, { name: 'value', title: 'Value', type: 'string' }] }] }
+
   ],
 }

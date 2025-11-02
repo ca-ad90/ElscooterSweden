@@ -23,7 +23,9 @@ module.exports = defineConfig({
         dataset:"production",
         studio_url: process.env.SANITY_STUDIO_URL ||"http://localhost:3000/studio",
         type_map:{
-          product:"product"
+          product:"product",
+          category:"category",
+          variant:"variants"
         }
       }
 

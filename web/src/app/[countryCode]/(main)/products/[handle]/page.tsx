@@ -1,8 +1,9 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { listProducts } from "@lib/data/products"
 import { getRegion, listRegions } from "@lib/data/regions"
-import ProductTemplate from "@modules/products/templates"
+import SanityProductTemplate from "@modules/products/templates/sanity-product-template"
+import { sanityClient } from "sanity/client"
+import { queryAllProducts, queryProductBySlug } from "sanity/queries"
 
 type Props = {
   params: Promise<{ countryCode: string; handle: string }>
@@ -18,28 +19,13 @@ export async function generateStaticParams() {
       return []
     }
 
-    const promises = countryCodes.map(async (country) => {
-      const { response } = await listProducts({
-        countryCode: country,
-        queryParams: { limit: 100, fields: "handle" },
-      })
-
-      return {
-        country,
-        products: response.products,
-      }
-    })
-
-    const countryProducts = await Promise.all(promises)
-
-    return countryProducts
-      .flatMap((countryData) =>
-        countryData.products.map((product) => ({
-          countryCode: countryData.country,
-          handle: product.handle,
-        }))
+    const all = await sanityClient.fetch<{ slug: { current: string } }[]>(queryAllProducts)
+    return countryCodes
+      .flatMap((country) =>
+        all
+          .map((p: { slug: { current: string } }) => ({ countryCode: country, handle: p.slug?.current }))
+          .filter((p: { handle: string }) => !!p.handle)
       )
-      .filter((param) => param.handle)
   } catch (error) {
     console.error(
       `Failed to generate static paths for product pages: ${
@@ -59,22 +45,19 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     notFound()
   }
 
-  const product = await listProducts({
-    countryCode: params.countryCode,
-    queryParams: { handle },
-  }).then(({ response }) => response.products[0])
+  const product = await sanityClient.fetch<any>(queryProductBySlug(handle))
 
   if (!product) {
     notFound()
   }
 
   return {
-    title: `${product.title} | Medusa Store`,
+    title: `${product.title} | Store`,
     description: `${product.title}`,
     openGraph: {
-      title: `${product.title} | Medusa Store`,
+      title: `${product.title} | Store`,
       description: `${product.title}`,
-      images: product.thumbnail ? [product.thumbnail] : [],
+      images: product?.mainImage?.asset?.url ? [product.mainImage.asset.url] : [],
     },
   }
 }
@@ -87,20 +70,11 @@ export default async function ProductPage(props: Props) {
     notFound()
   }
 
-  const pricedProduct = await listProducts({
-    countryCode: params.countryCode,
-    queryParams: { handle: params.handle },
-  }).then(({ response }) => response.products[0])
+  const pricedProduct = await sanityClient.fetch<any>(queryProductBySlug(params.handle))
 
   if (!pricedProduct) {
     notFound()
   }
 
-  return (
-    <ProductTemplate
-      product={pricedProduct}
-      region={region}
-      countryCode={params.countryCode}
-    />
-  )
+  return <SanityProductTemplate product={pricedProduct} countryCode={params.countryCode} />
 }

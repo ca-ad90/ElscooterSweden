@@ -1,6 +1,6 @@
-import { listProductsWithSort } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
-import ProductPreview from "@modules/products/components/product-preview"
+import SanityProductPreview from "@modules/products/components/sanity-product-preview"
+import { fetchProducts } from "sanity/services/products"
 import { Pagination } from "@modules/store/components/pagination"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 
@@ -8,24 +8,20 @@ const PRODUCT_LIMIT = 12
 
 type PaginatedProductsParams = {
   limit: number
-  collection_id?: string[]
-  category_id?: string[]
-  id?: string[]
-  order?: string
 }
 
 export default async function PaginatedProducts({
   sortBy,
   page,
-  collectionId,
-  categoryId,
+  collectionSlug,
+  categorySlug,
   productsIds,
   countryCode,
 }: {
   sortBy?: SortOptions
   page: number
-  collectionId?: string
-  categoryId?: string
+  collectionSlug?: string
+  categorySlug?: string
   productsIds?: string[]
   countryCode: string
 }) {
@@ -33,35 +29,17 @@ export default async function PaginatedProducts({
     limit: 12,
   }
 
-  if (collectionId) {
-    queryParams["collection_id"] = [collectionId]
-  }
-
-  if (categoryId) {
-    queryParams["category_id"] = [categoryId]
-  }
-
   if (productsIds) {
     queryParams["id"] = productsIds
   }
 
-  if (sortBy === "created_at") {
-    queryParams["order"] = "created_at"
-  }
-
   const region = await getRegion(countryCode)
 
-  if (!region) {
-    return null
-  }
-
-  let {
-    response: { products, count },
-  } = await listProductsWithSort({
+  const { items: products, count } = await fetchProducts({
     page,
-    queryParams,
-    sortBy,
-    countryCode,
+    limit: PRODUCT_LIMIT,
+    categorySlug,
+    tagSlug: collectionSlug,
   })
 
   const totalPages = Math.ceil(count / PRODUCT_LIMIT)
@@ -75,7 +53,7 @@ export default async function PaginatedProducts({
         {products.map((p) => {
           return (
             <li key={p.id}>
-              <ProductPreview product={p} region={region} />
+              <SanityProductPreview product={p as any} countryCode={countryCode} />
             </li>
           )
         })}

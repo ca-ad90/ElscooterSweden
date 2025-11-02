@@ -1,5 +1,6 @@
+//@ts-nocheck
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
-import { ProductDTO } from "@medusajs/framework/types";
+import { ProductVariantDTO } from "@medusajs/framework/types";
 import {
     ContainerRegistrationKeys,
     promiseAll,
@@ -7,14 +8,13 @@ import {
 import SanityModuleService from "../../../modules/sanity/service";
 import { SANITY_MODULE } from "../../../modules/sanity";
 
-export type SyncStepInput = {
-    product_ids?: string[];
+export type SyncVariantStepInput = {
+    variant_ids?: string[];
 };
 
-export const syncStep = createStep(
-    { name: "sync-step", async: true },
-    async (input: SyncStepInput, { container }) => {
-        //breakpoint
+export const syncVariantStep = createStep(
+    { name: "sync-variant-step", async: true },
+    async (input: SyncVariantStepInput, { container }) => {
         const sanityModule: SanityModuleService =
             container.resolve(SANITY_MODULE);
         const query = container.resolve(ContainerRegistrationKeys.QUERY);
@@ -27,28 +27,21 @@ export const syncStep = createStep(
         let batchSize = 200;
         let hasMore = true;
         let offset = 0;
-        const filters = input.product_ids
+        const filters = input.variant_ids
             ? {
-                  id: input.product_ids,
+                  id: input.variant_ids,
               }
             : {};
 
         while (hasMore) {
-            // @ts-ignore
-            const { data: products, metadata: { count } = {} } =
+            const { data: variants, metadata: { count } = {} } =
                 await query.graph({
-                    entity: "product",
+                    entity: "product_variant",
                     fields: [
                         "id",
                         "title",
-                        "handle",
-                        "description",
+                        "sku",
                         "metadata",
-                        "categories.*",
-                        "tags.*",
-                        "variants.*",
-                        "images.*",
-                        "sanity_product.*"
                     ],
                     filters,
                     pagination: {
@@ -61,33 +54,29 @@ export const syncStep = createStep(
                 });
             try {
                 await promiseAll(
-                    products.map(async (prod) => {
+                    variants.map(async (variant) => {
                         const after = await sanityModule.upsertSyncDocument(
-                            "product",
-                            prod as ProductDTO,
+                            "variant",
+                            variant as ProductVariantDTO,
                         );
-                        console.log("after", after);
+
                         upsertMap.push({
-                            // @ts-ignore
-                            before: prod.sanity_product,
+                            before: null, // Variants don't have sanity links
                             after,
                         });
-                        console.log(upsertMap);
                         return after;
                     }),
                 );
             } catch (e) {
-                console.log("e", e.details.value);
-                console.log("upsertMap", upsertMap);
                 return StepResponse.permanentFailure(
-                    `An error occurred while syncing documents: ${e}`,
+                    `An error occurred while syncing variants: ${e}`,
                     upsertMap,
                 );
             }
 
             offset += batchSize;
             hasMore = offset < (count ?? 0);
-            total += products.length;
+            total += variants.length;
         }
         return new StepResponse({ total }, upsertMap);
     },
@@ -100,15 +89,11 @@ export const syncStep = createStep(
             container.resolve(SANITY_MODULE);
 
         await promiseAll(
-            upsertMap.map(({ before, after }) => {
-                if (!before) {
-                    // delete the document
-                    return sanityModule.delete(after._id);
+            upsertMap.map(({ after }) => {
+                if (!after) {
+                    return;
                 }
-
-                const { _id: id, ...oldData } = before;
-
-                return sanityModule.update(id, oldData);
+                return sanityModule.delete(after._id);
             }),
         );
     },

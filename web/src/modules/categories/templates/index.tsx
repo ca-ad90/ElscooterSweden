@@ -8,6 +8,7 @@ import { SortOptions } from "@modules/store/components/refinement-list/sort-prod
 import PaginatedProducts from "@modules/store/templates/paginated-products"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HttpTypes } from "@medusajs/types"
+import type { SanityCategory } from "@/sanity/types"
 
 export default function CategoryTemplate({
   category,
@@ -15,7 +16,7 @@ export default function CategoryTemplate({
   page,
   countryCode,
 }: {
-  category: HttpTypes.StoreProductCategory
+  category: any
   sortBy?: SortOptions
   page?: string
   countryCode: string
@@ -25,9 +26,9 @@ export default function CategoryTemplate({
 
   if (!category || !countryCode) notFound()
 
-  const parents = [] as HttpTypes.StoreProductCategory[]
+  const parents = [] as any[]
 
-  const getParents = (category: HttpTypes.StoreProductCategory) => {
+  const getParents = (category: any) => {
     if (category.parent_category) {
       parents.push(category.parent_category)
       getParents(category.parent_category)
@@ -57,7 +58,7 @@ export default function CategoryTemplate({
                 /
               </span>
             ))}
-          <h1 data-testid="category-page-title">{category.name}</h1>
+          <h1 data-testid="category-page-title">{category.name || category.title}</h1>
         </div>
         {category.description && (
           <div className="mb-8 text-base-regular">
@@ -87,7 +88,7 @@ export default function CategoryTemplate({
           <PaginatedProducts
             sortBy={sort}
             page={pageNumber}
-            categoryId={category.id}
+            categorySlug={(category as any).slug}
             countryCode={countryCode}
           />
         </Suspense>

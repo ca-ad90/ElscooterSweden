@@ -20,7 +20,9 @@
       "@modules/*": ["modules/*"],
       "@pages/*": ["pages/*"],
       "@styles/*": ["styles/*"],
-      "@public/*": ["public/*"]
+      "@public/*": ["public/*"],
+      "@sanity/*": ["sanity/*"],
+      "@/*": ["*"],
     },
     "plugins": [
       {

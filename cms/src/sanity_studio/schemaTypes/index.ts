@@ -2,12 +2,9 @@ import { SchemaPluginOptions } from "sanity"
 /*
 import productSchema from "./documents/products_old"
 import PersonSchema from "./documents/Product2_old"
-
-export const schema: SchemaPluginOptions = {
-  types: [productSchema, PersonSchema],
-  templates: (templates) =>
+  //templates: (templates) =>
    templates.filter((template) => template.schemaType !== "product"),
-}*/
+*/
 
 import product from "./documents/product"
 import variants from "./documents/variants"
@@ -52,4 +49,5 @@ export const schema: SchemaPluginOptions = {
     banner,
     featuredCollection,
   ],
+
 }

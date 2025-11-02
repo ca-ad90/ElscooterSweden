@@ -13,7 +13,7 @@ export default function CollectionTemplate({
   countryCode,
 }: {
   sortBy?: SortOptions
-  collection: HttpTypes.StoreCollection
+  collection: any
   page?: string
   countryCode: string
 }) {
@@ -37,7 +37,7 @@ export default function CollectionTemplate({
           <PaginatedProducts
             sortBy={sort}
             page={pageNumber}
-            collectionId={collection.id}
+            collectionSlug={collection.slug}
             countryCode={countryCode}
           />
         </Suspense>
