@@ -16,6 +16,7 @@
     "build": "medusa build",
     "both": "concurrently --kill-others \"cd ../ess-store-frontend && npm run dev\" \" npm run dev\"",
     "seed": "medusa exec ./src/scripts/seed.ts",
+    "demo": "medusa exec ./src/scripts/demo-products.ts",
     "start": "medusa start",
     "dev": "medusa develop",
     "test:integration:http": "TEST_TYPE=integration:http NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",
@@ -23,6 +24,7 @@
     "test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit"
   },
   "dependencies": {
+    "@elscootersweden/shared-types": "file:../shared-types",
     "@medusajs/admin-sdk": "2.11.0",
     "@medusajs/cli": "2.11.0",
     "@medusajs/framework": "2.11.0",

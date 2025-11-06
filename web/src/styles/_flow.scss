@@ -1,4 +1,4 @@
-@import "mixins";
+@use "mixins" as *;
 // 9. UTILITIES / FLOW
 // Provides utility classes for managing vertical rhythm (flow).
 // Complements Tailwind's `space-y-*` but is semantic.
@@ -16,7 +16,3 @@
 .flow-lg { @include flow("lg"); }
 .flow-xl { @include flow("xl"); }
 .flow-xxl { @include flow("xxl"); }
-
-div{
-  @include flow("md");
-}

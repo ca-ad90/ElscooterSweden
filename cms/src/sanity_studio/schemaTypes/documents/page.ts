@@ -9,7 +9,6 @@ export default {
     { name: 'content', title: 'Content', type: 'array', of: [
       { type: 'heroSection' },
       { type: 'richTextBlock' },
-      { type: 'imageGallery' },
       { type: 'productCarousel' },
       { type: 'ctaSection' },
       { type: 'faqSection' },

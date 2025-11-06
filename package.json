@@ -9,7 +9,7 @@
     "dev:backend": "cd ess-store && npm run dev",
     "dev:web": "cd web && npm run dev",
     "dev:cms": "cd cms && npm run dev",
-    "dev:each": "wt -w 0 new-tab -d \"ess-store\" cmd /k \"npm run dev\" & wt -w 0 new-tab -d \"web\" cmd /k \"npm run dev\" & wt -w 0 new-tab -d \"cms\" cmd /k \"npm run dev\""
+    "dev:each": "wt -w 0 new-tab -d \"ess-store\" cmd /k \"title ess-store && npm run dev\" & wt -w 0 new-tab -d \"web\" cmd /k \"title web && npm run dev\" & wt -w 0 new-tab -d \"cms\" cmd /k \"title cms && npm run dev\""
 
 ,
     "install:all": "concurrently --kill-others \"cd ess-store && npm install\" \"cd web && npm install\" \"cd cms && npm install\""

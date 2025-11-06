@@ -7,9 +7,10 @@ import PersonSchema from "./documents/Product2_old"
 */
 
 import product from "./documents/product"
-import variants from "./documents/variants"
+import variants from "./documents/variant"
 import tags from "./documents/tags"
 import category from "./documents/category"
+import typeSchema from "./documents/typeSchema"
 import page from "./documents/page"
 import homePage from "./documents/homePage"
 import navigationItem from "./documents/navigationItem"
@@ -20,19 +21,21 @@ import blogPost from "./documents/blogPost"
 import seo from "./objects/seo"
 import heroSection from "./objects/heroSection"
 import richTextBlock from "./objects/richTextBlock"
-import imageGallery from "./objects/imageGallery"
+//import imageGallery from "./objects/imageGallery"
 import productCarousel from "./objects/productCarousel"
 import ctaSection from "./objects/ctaSection"
 import faqSection from "./objects/faqSection"
 import banner from "./objects/banner"
 import featuredCollection from "./objects/featuredCollection"
 
+
 export const schema: SchemaPluginOptions = {
   types: [
     product,
-    variants,
     tags,
     category,
+    variants,
+    typeSchema,
     page,
     homePage,
     navigationItem,
@@ -42,7 +45,6 @@ export const schema: SchemaPluginOptions = {
     seo,
     heroSection,
     richTextBlock,
-    imageGallery,
     productCarousel,
     ctaSection,
     faqSection,

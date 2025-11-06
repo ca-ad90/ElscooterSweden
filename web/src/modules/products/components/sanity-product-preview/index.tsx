@@ -9,7 +9,7 @@ export default function SanityProductPreview({
   product: SanityProduct
   countryCode: string
 }) {
-  const href = `/${countryCode}/products/${product.slug ?? product.id}`
+  const href = `/products/${product.slug ?? product.id}`
   const image = product.mainImage || product.images?.[0]
   const imgUrl = image?.asset ? urlFor(image).width(600).height(600).fit("crop").url() : undefined
 

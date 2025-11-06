@@ -1,4 +1,6 @@
 @use "sass:color";
+@use "functions" as *;
+@use "mixins" as *;
 
 // 8. LAYOUT
 // Global layout classes. Tailwind handles most layout, so this

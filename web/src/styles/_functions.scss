@@ -1,9 +1,12 @@
+@use "variables" as *;
 
 // 2. TOOLS / FUNCTIONS
 // Helper functions to compute values.
 // Must be imported after _variables.scss.
 
 @use "sass:math";
+@use "sass:meta";
+@use "sass:map";
 
 // Converts a unitless pixel value to rem.
 @function rem($px, $base: 16) {
@@ -12,7 +15,7 @@
 
 // Strips the unit from a number.
 @function strip-unit($number) {
-  @if type-of($number) == "number" and not math.is-unitless($number) {
+  @if meta.type-of($number) == "number" and not math.is-unitless($number) {
     @return math.div($number, $number * 0 + 1);
   }
   @return $number;
@@ -34,11 +37,11 @@
 
 // Helper to get a z-index value from the layers map.
 @function z($layer) {
-  @if not map-has-key($z-layers, $layer) {
+  @if not map.has-key($z-layers, $layer) {
     @warn "Z-index layer '#{$layer}' not found in $z-layers.";
     @return null;
   }
-  @return map-get($z-layers, $layer);
+  @return map.get($z-layers, $layer);
 }
 
 // Helper for adding alpha to a color.
@@ -48,18 +51,18 @@
 
 // Helper to get static size from map.
 @function size-static($key) {
-  @if not map-has-key($size-static-map, $key) {
+  @if not map.has-key($size-static-map, $key) {
     @warn "Static size '#{$key}' not found in $size-static-map.";
     @return null;
   }
-  @return map-get($size-static-map, $key);
+  @return map.get($size-static-map, $key);
 }
 
 // Helper to get dynamic size from map.
 @function size-dynamic($key) {
-  @if not map-has-key($size-dynamic-map, $key) {
+  @if not map.has-key($size-dynamic-map, $key) {
     @warn "Dynamic size '#{$key}' not found in $size-dynamic-map.";
     @return null;
   }
-  @return map-get($size-dynamic-map, $key);
+  @return map.get($size-dynamic-map, $key);
 }

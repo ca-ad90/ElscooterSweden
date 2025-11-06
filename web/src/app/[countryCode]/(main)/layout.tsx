@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 
+
 import { listCartOptions, retrieveCart } from "@lib/data/cart"
 import { retrieveCustomer } from "@lib/data/customer"
 import { getBaseURL } from "@lib/util/env"
@@ -26,7 +27,7 @@ export default async function PageLayout(props: { children: React.ReactNode }) {
 
   return (
     <>
-      <Nav />
+      <Nav links={[{href: "/", label: "Home"}, {href: "/products", label: "Products"}, {href: "/about", label: "About"}, {href: "/contact", label: "Contact"}]} />
       {customer && cart && (
         <CartMismatchBanner customer={customer} cart={cart} />
       )}

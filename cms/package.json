@@ -10,6 +10,7 @@
     "deploy": "sanity deploy"
   },
   "dependencies": {
+    "@elscootersweden/shared-types": "file:../shared-types",
     "@sanity/dashboard": "^5.0.0",
     "@sanity/image-url": "^1.2.0",
     "@sanity/vision": "^4.11.0",

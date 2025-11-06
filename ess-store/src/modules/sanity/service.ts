@@ -1,18 +1,38 @@
-import { Logger, ProductDTO, ProductCategoryDTO, ProductVariantDTO } from "@medusajs/framework/types";
+import { Logger, ProductDTO, ProductImageDTO } from "@medusajs/framework/types";
 import {
     SanityClient,
     createClient,
     FirstDocumentMutationOptions,
 } from "@sanity/client";
+import fs from "fs";
+import https from "https";
+import http from "http";
+import { Readable } from "stream";
 
-// ============================================================================
-// Type Definitions
-// ============================================================================
+// other imports...
+
+import { ProductWithVariants } from "../../workflows/sanity-sync-products/steps/sync";
+import { ConsoleSpanExporter } from "@medusajs/framework/opentelemetry/sdk-trace-node";
+
+// Helper to generate a unique _key for Sanity array items
+function generateKey(): string {
+    return Math.random().toString(36).substring(2, 15);
+}
+
+// Helper to create Sanity slug object
+function createSlug(title: string): { _type: "slug"; current: string } {
+    const slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+    return {
+        _type: "slug",
+        current: slug,
+    };
+}
 
 const SyncDocumentTypes = {
     PRODUCT: "product",
-    CATEGORY: "category",
-    VARIANT: "variant",
 } as const;
 
 type SyncDocumentTypes =
@@ -26,302 +46,31 @@ type ModuleOptions = {
     type_map?: Record<SyncDocumentTypes, string>;
     studio_url?: string;
 };
-
 type InjectedDependencies = {
     logger: Logger;
 };
-
-type SyncDocumentInputMap = {
-    product: ProductDTO;
-    category: ProductCategoryDTO;
-    variant: ProductVariantDTO;
+type PriceDTO = {
+    amount: number;
+    currency_code: string;
 };
-
-type SyncDocumentInputs<T extends keyof SyncDocumentInputMap> = SyncDocumentInputMap[T];
-
-// ============================================================================
-// Strategy Pattern: Sync Transformers
-// ============================================================================
-
-interface SyncTransformer<T> {
-    transformForCreate: (data: T) => any;
-    transformForUpdate: (data: T) => any;
-}
-
-type TransformerRegistry = {
-    [K in keyof SyncDocumentInputMap]: SyncTransformer<SyncDocumentInputMap[K]>;
+type OptionDTO = {
+    title: string;
+    values: string[];
 };
+type SyncDocumentInputs<T> = T extends "product" ? ProductDTO : never;
 
-// ============================================================================
-// Individual Schema Transformers
-// ============================================================================
-
-class ProductTransformer implements SyncTransformer<ProductDTO> {
-    constructor(private typeMap: Record<SyncDocumentTypes, string>) {}
-
-    transformForCreate = (product: ProductDTO) => {
-        // Transform specs from metadata to Sanity format
-        const specs = this.transformSpecs(product.metadata);
-
-        // Get the cheapest variant price if available
-        const cheapestPrice = this.getCheapestPrice(product.variants);
-
-        // Transform images to reference format - SKIPPED for now as images need to be uploaded to Sanity first
-        // const images = this.transformImages(product.images);
-
-        // Transform categories to reference format - SKIPPED until categories are synced to Sanity
-        // const categories = product.categories?.map((cat) => ({
-        //     _type: "reference",
-        //     _ref: cat.id,
-        // }));
-
-        // Transform tags to reference format - SKIPPED until tags are synced to Sanity
-        // const tags = product.tags?.map((tag) => ({
-        //     _type: "reference",
-        //     _ref: tag.id,
-        // }));
-
-        // Transform variants to reference format - SKIPPED until variants are synced to Sanity
-        // const variants = product.variants?.map((variant) => ({
-        //     _type: "reference",
-        //     _ref: variant.id,
-        // }));
-
-        return {
-            _type: this.typeMap[SyncDocumentTypes.PRODUCT],
-            _id: product.id,
-            medusaId: product.id,
-            title: product.title,
-            slug: {
-                _type: "slug",
-                current: product.handle,
-            },
-            description: product.description || undefined,
-            price: cheapestPrice || undefined,
-            inStock: this.checkStockStatus(product.variants),
-            specs: specs.length > 0 ? specs : undefined,
-            // mainImage: images.length > 0 ? images[0] : undefined,
-            // imageGallery: images.length > 1 ? { _type: "imageGallery", images: images.slice(1) } : undefined,
-            // categories: categories && categories.length > 0 ? categories : undefined,
-            // tags: tags && tags.length > 0 ? tags : undefined,
-            // variants: variants && variants.length > 0 ? variants : undefined,
-        };
-    };
-
-    transformForUpdate = (product: ProductDTO) => {
-        // Transform specs from metadata to Sanity format
-        const specs = this.transformSpecs(product.metadata);
-
-        // Get the cheapest variant price if available
-        const cheapestPrice = this.getCheapestPrice(product.variants);
-
-        // Transform images to reference format - SKIPPED for now as images need to be uploaded to Sanity first
-        // const images = this.transformImages(product.images);
-
-        // Transform categories to reference format - SKIPPED until categories are synced to Sanity
-        // const categories = product.categories?.map((cat) => ({
-        //     _type: "reference",
-        //     _ref: cat.id,
-        // }));
-
-        // Transform tags to reference format - SKIPPED until tags are synced to Sanity
-        // const tags = product.tags?.map((tag) => ({
-        //     _type: "reference",
-        //     _ref: tag.id,
-        // }));
-
-        // Transform variants to reference format - SKIPPED until variants are synced to Sanity
-        // const variants = product.variants?.map((variant) => ({
-        //     _type: "reference",
-        //     _ref: variant.id,
-        // }));
-
-        return {
-            set: {
-                title: product.title,
-                slug: {
-                    _type: "slug",
-                    current: product.handle,
-                },
-                description: product.description || undefined,
-                price: cheapestPrice || undefined,
-                inStock: this.checkStockStatus(product.variants),
-                specs: specs.length > 0 ? specs : undefined,
-                // mainImage: images.length > 0 ? images[0] : undefined,
-                // imageGallery: images.length > 1 ? { _type: "imageGallery", images: images.slice(1) } : undefined,
-                // categories: categories && categories.length > 0 ? categories : undefined,
-                // tags: tags && tags.length > 0 ? tags : undefined,
-                // variants: variants && variants.length > 0 ? variants : undefined,
-            },
-        };
-    };
-
-    private transformSpecs(metadata: any): Array<{ title: string; value: string }> {
-        if (!metadata || typeof metadata !== "object") {
-            return [];
-        }
-
-        const specs: Array<{ title: string; value: string }> = [];
-
-        // Handle specs object
-        const specsObj = metadata.specs;
-        if (specsObj && typeof specsObj === "object") {
-            Object.entries(specsObj).forEach(([key, value]) => {
-                specs.push({
-                    title: key,
-                    value: String(value),
-                });
-            });
-        }
-
-        return specs;
-    }
-
-    private getCheapestPrice(variants?: ProductDTO["variants"]): number | undefined {
-        if (!variants || variants.length === 0) {
-            return undefined;
-        }
-
-        // Calculate the cheapest price from variants
-        // Note: In a real scenario, you'd need price data with region/currency
-        // For now, we'll just return undefined as price comes from calculated_price
-        return undefined;
-    }
-
-    private checkStockStatus(variants?: ProductDTO["variants"]): boolean {
-        if (!variants || variants.length === 0) {
-            return false;
-        }
-
-        // Check if any variant has inventory
-        // This is a simplified check - you might want to integrate with inventory module
-        return variants.some((v) => v.manage_inventory === false || v.allow_backorder === true);
-    }
-
-    private transformImages(images?: ProductDTO["images"]): any[] {
-        if (!images || images.length === 0) {
-            return [];
-        }
-
-        return images
-            .sort((a, b) => a.rank - b.rank)
-            .map((img) => ({
-                _type: "image",
-                asset: {
-                    _type: "reference",
-                    _ref: img.url, // In production, you'd upload and get an asset reference
-                },
-            }));
-    }
-}
-
-class CategoryTransformer implements SyncTransformer<ProductCategoryDTO> {
-    constructor(private typeMap: Record<SyncDocumentTypes, string>) {}
-
-    transformForCreate = (category: ProductCategoryDTO) => {
-        // Generate slug from name if handle is not available
-        const slugValue = category.handle || category.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
-
-        return {
-            _type: this.typeMap[SyncDocumentTypes.CATEGORY],
-            _id: category.id,
-            title: category.name,
-            slug: {
-                _type: "slug",
-                current: slugValue,
-            },
-            description: category.description || undefined,
-            // image: category.metadata?.image ? {
-            //     _type: "image",
-            //     asset: {
-            //         _type: "reference",
-            //         _ref: category.metadata.image,
-            //     },
-            // } : undefined,
-        };
-    };
-
-    transformForUpdate = (category: ProductCategoryDTO) => {
-        // Generate slug from name if handle is not available
-        const slugValue = category.handle || category.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
-
-        return {
-            set: {
-                title: category.name,
-                slug: {
-                    _type: "slug",
-                    current: slugValue,
-                },
-                description: category.description || undefined,
-                // image: category.metadata?.image ? {
-                //     _type: "image",
-                //     asset: {
-                //         _type: "reference",
-                //         _ref: category.metadata.image,
-                //     },
-                // } : undefined,
-            },
-        };
-    };
-}
-
-class VariantTransformer implements SyncTransformer<ProductVariantDTO> {
-    constructor(private typeMap: Record<SyncDocumentTypes, string>) {}
-
-    transformForCreate = (variant: ProductVariantDTO) => {
-        // Transform image if available in metadata - SKIPPED as images need to be uploaded to Sanity first
-        // const image = variant.metadata?.image ? {
-        //     _type: "image",
-        //     asset: {
-        //         _type: "reference",
-        //         _ref: variant.metadata.image,
-        //     },
-        // } : undefined;
-
-        return {
-            _type: this.typeMap[SyncDocumentTypes.VARIANT],
-            _id: variant.id,
-            medusaId: variant.id,
-            title: variant.title,
-            sku: variant.sku || undefined,
-            price: undefined, // Will be set from calculated_price if available
-            stock: undefined, // Will be set from inventory if available
-            // image: image,
-        };
-    };
-
-    transformForUpdate = (variant: ProductVariantDTO) => {
-        // Transform image if available in metadata - SKIPPED as images need to be uploaded to Sanity first
-        // const image = variant.metadata?.image ? {
-        //     _type: "image",
-        //     asset: {
-        //         _type: "reference",
-        //         _ref: variant.metadata.image,
-        //     },
-        // } : undefined;
-
-        return {
-            set: {
-                title: variant.title,
-                sku: variant.sku || undefined,
-                price: undefined, // Will be set from calculated_price if available
-                stock: undefined, // Will be set from inventory if available
-                // image: image,
-            },
-        };
-    };
-}
-
-// ============================================================================
-// Main Service
-// ============================================================================
+type TransformationMap<T> = Record<
+    SyncDocumentTypes,
+    (data: SyncDocumentInputs<T>) => any
+>;
 
 class SanityModuleService {
-    public client: SanityClient;
-    public studioUrl?: string;
-    public logger: Logger;
-    public typeMap: Record<SyncDocumentTypes, string>;
-    public transformers: TransformerRegistry;
+    private client: SanityClient;
+    private studioUrl?: string;
+    private logger: Logger;
+    private typeMap: Record<SyncDocumentTypes, string>;
+    private createTransformationMap: TransformationMap<SyncDocumentTypes>;
+    private updateTransformationMap: TransformationMap<SyncDocumentTypes>;
 
     constructor({ logger }: InjectedDependencies, options: ModuleOptions) {
         this.client = createClient({
@@ -335,30 +84,174 @@ class SanityModuleService {
         this.logger.info("Connected to Sanity");
 
         this.studioUrl = options.studio_url;
-
+        // TODO initialize more properties
         this.typeMap = Object.assign(
             {},
             {
                 [SyncDocumentTypes.PRODUCT]: "product",
-                [SyncDocumentTypes.CATEGORY]: "category",
-                [SyncDocumentTypes.VARIANT]: "variants",
             },
             options.type_map ?? {},
         );
 
-        // Register transformers for each schema type
-        this.transformers = {
-            [SyncDocumentTypes.PRODUCT]: new ProductTransformer(this.typeMap),
-            [SyncDocumentTypes.CATEGORY]: new CategoryTransformer(this.typeMap),
-            [SyncDocumentTypes.VARIANT]: new VariantTransformer(this.typeMap),
-        } as TransformerRegistry;
+        this.createTransformationMap = {
+            [SyncDocumentTypes.PRODUCT]: this.transformProductForCreate,
+        };
+
+        this.updateTransformationMap = {
+            [SyncDocumentTypes.PRODUCT]: this.transformProductForUpdate,
+        };
     }
+
+
+    // --- Utility functions for product transformation ---
+
+    private getCategoryNames(categories: any[]): string[] {
+        return Array.isArray(categories)
+            ? categories.map((cat) =>
+                  typeof cat === "object" && cat?.name ? cat.name : String(cat),
+              )
+            : [];
+    }
+
+    private getTagNames(tags: any[]): string[] {
+        return Array.isArray(tags)
+            ? tags.map((tag: any) => {
+                  if (typeof tag === "string") return tag;
+                  if (typeof tag === "object") {
+                      return tag.name || tag.title || tag.value || String(tag);
+                  }
+                  return String(tag);
+              })
+            : [];
+    }
+
+    private getSpecs(specs: any[]): Array<{ _key: string; title: string; value: string }> {
+        return Array.isArray(specs)
+            ? specs.map((spec) => ({
+                  _key: generateKey(),
+                  title: spec.title || "",
+                  value: spec.value || "",
+              }))
+            : [];
+    }
+
+    private getOptions(options: any[]): Array<{ _key: string; title: string; values: string[] }> {
+        return Array.isArray(options)
+            ? options.map((opt) => ({
+                  _key: generateKey(),
+                  title: opt.title || "",
+                  values: Array.isArray(opt.values)
+                      ? opt.values.map((value: any) => value.value)
+                      : [],
+              }))
+            : [];
+    }
+
+    private getVariantOptions(variantOptions: any[]): Array<{ _key: string; title: string; value: string }> {
+        return Array.isArray(variantOptions)
+            ? variantOptions.map((opt: any) => ({
+                  _key: generateKey(),
+                  title: opt.title || "",
+                  value: opt.value || "",
+              }))
+            : [];
+    }
+
+    private getVariants(variants: any[]): Array<any> {
+        return Array.isArray(variants)
+            ? variants.map((variant: any) => ({
+                  _key: generateKey(),
+                  title: variant.title || "",
+                  sku: variant.sku || "",
+                  price:
+                      (variant.prices &&
+                          Array.isArray(variant.prices) &&
+                          variant.prices[0]?.amount) ||
+                      variant.price ||
+                      0,
+                  options: this.getVariantOptions(variant.options),
+              }))
+            : [];
+    }
+
+    private getMainImage(thumbnail: ProductDTO["thumbnail"]): { url: string } {
+        return { url: thumbnail || "" };
+    }
+
+    private getProductImages(images: ProductImageDTO[]): {url: string, _key: string}[] {
+        return images.map((image) => ({ url: image.url || "",_key: generateKey() }));
+    }
+
+    private getFirstVariantPrice(variants: any[]): number {
+        if (Array.isArray(variants) && variants[0]?.prices?.[0]?.amount != null)
+            return variants[0].prices[0].amount;
+        return 0;
+    }
+
+    // --- Product transformations ---
+
+    private transformProductForCreate = (
+        product: ProductWithVariants,
+    ) => {
+        const categories = this.getCategoryNames(product.categories?product.categories:[]);
+        const tags = this.getTagNames(product.tags);
+        const specs = this.getSpecs(product.specs);
+        const options = this.getOptions(product.options);
+        const variants = this.getVariants(product.variants);
+        const mainImage = this.getMainImage(product.thumbnail);
+        const product_images = this.getProductImages(product.images);
+        const price = this.getFirstVariantPrice(product.variants);
+
+        return {
+            _id: product.id,
+            _type: this.typeMap[SyncDocumentTypes.PRODUCT],
+            title: product.title || "",
+            slug: product.title ? createSlug(product.title) : undefined,
+            description: product.description || "",
+            categories,
+            tags,
+            mainImage,
+            product_images,
+            price,
+            inStock: true, // You may want to calculate this from variant stock
+            specs,
+            options,
+            variants,
+        };
+    };
+
+    private transformProductForUpdate = (product: ProductWithVariants) => {
+        const categories = this.getCategoryNames(product.categories?product.categories:[]);
+        const tags = this.getTagNames(product.tags);
+        const specs = this.getSpecs(product.specs);
+        const options = this.getOptions(product.options);
+        const variants = this.getVariants(product.variants);
+        const mainImage = this.getMainImage(product.thumbnail);
+        const product_images = this.getProductImages(product.images);
+        const price = this.getFirstVariantPrice(product.variants);
+
+        return {
+            set: {
+                title: product.title || "",
+                description: product.description || "",
+                categories,
+                tags,
+                mainImage,
+                product_images,
+                price,
+                inStock: true,
+                specs,
+                options,
+                variants,
+            },
+        };
+    };
 
     async upsertSyncDocument<T extends SyncDocumentTypes>(
         type: T,
         data: SyncDocumentInputs<T>,
     ) {
-        console.log("---BREAK??---");
+
         const existing = await this.client.getDocument(data.id);
         if (existing) {
             return await this.updateSyncDocument(type, data);
@@ -366,49 +259,168 @@ class SanityModuleService {
             return await this.createSyncDocument(type, data);
         }
     }
-
     async createSyncDocument<T extends SyncDocumentTypes>(
         type: T,
         data: SyncDocumentInputs<T>,
         options?: FirstDocumentMutationOptions,
     ) {
-        console.log("CREATE SYNC DOCUMENT");
-        console.log("data", data);
-        console.log("options", options);
-        const doc = this.transformers[type].transformForCreate(data);
+        const doc = this.createTransformationMap[type](data);
+        console.debug("Transformation is OK...");
+        if (doc.mainImage && doc.mainImage.url) {
+            console.debug("Main Image exists");
+            doc.mainImage = await this.uploadImage(doc.mainImage.url);
+        } else {
+            console.debug("Main Image does not exist",doc.mainImage);
+        }
+        if (doc.product_images && doc.product_images.length > 0 ) {
+            console.debug("Product Images exist");
+            let productImages = [];
+            for(const image of doc.product_images){
+                if(image.url){
+                    let uploadedImage = await this.uploadImage(image.url);
+                    if(uploadedImage instanceof Error){
+                        console.debug("Error uploading image:", uploadedImage.message);
+                        continue;
+                    }else {
+                        console.debug("Uploaded image:", uploadedImage);
+                        productImages.push({_key: image._key, ...uploadedImage} as never);
+                    }
+                } else {
+                    console.debug("url is not present");
+                }
+            }
+            doc.product_images = productImages;
+            console.debug("prepare to create");
+        }
         return await this.client.create(doc, options);
     }
-
     async updateSyncDocument<T extends SyncDocumentTypes>(
         type: T,
         data: SyncDocumentInputs<T>,
     ) {
-        const operations = this.transformers[type].transformForUpdate(data);
-        console.log("UPDATE SYNC DOCUMENT");
-        console.log("data", data);
-        console.log("operations", operations);
+        const operations = this.updateTransformationMap[type](data);
+        if (operations.set.mainImage && operations.set.mainImage.url) {
+            console.debug("Main Image exists");
+            operations.set.mainImage = await this.uploadImage(operations.set.mainImage.url);
+        } else {
+            console.debug("Main Image does not exist",operations.set.mainImage);
+        }
+        if (operations.set.product_images && operations.set.product_images.length > 0 ) {
+            console.debug("Product Images exist");
+            let productImages = [];
+            for(const image of operations.set.product_images){
+                if(image.url){
+                    let uploadedImage = await this.uploadImage(image.url);
+                    if(uploadedImage instanceof Error){
+                        console.debug("Error uploading image:", uploadedImage.message);
+                        continue;
+                    }else {
+                        console.debug("Uploaded image:", uploadedImage);
+                        productImages.push({_key: image._key, ...uploadedImage} as never);
+                    }
+                } else {
+                    console.debug("url is not present");
+                }
+            }
+            operations.set.product_images = productImages;
+            console.debug("prepare to create");
+        }
+        console.debug("UPSERT SYNC DOCUMENT");
         return await this.client.patch(data.id, operations).commit();
     }
-
     async retrieve(id: string) {
         return this.client.getDocument(id);
     }
-
     async delete(id: string) {
         return this.client.delete(id);
     }
-
     async update(id: string, data: any) {
         return this.client.patch(id, { set: data }).commit();
     }
-
     async list(filter: { id: string | string[] }) {
         const data = await this.client.getDocuments(
             Array.isArray(filter.id) ? filter.id : [filter.id],
         );
         return data.map((doc) => ({ id: doc?._id, ...doc }));
     }
+    async getImageStream(image: string) {
+        console.debug("Getting image stream for:", image);
+        return new Promise((resolve, reject) => {
+            if(image.startsWith("https")){
+            https.get(image, (response) => {
+                if (response.statusCode !== 200) {
+                    if (response.statusCode === 302) {
+                        console.debug(
+                            "Redirecting to:",
+                            response.headers.location as string,
+                        );
+                        resolve(
+                            this.getImageStream(
+                                response.headers.location as string,
+                            ),
+                        );
+                    } else {
+                        reject(
+                            new Error(
+                                `Failed to get '${image}' (${response.statusCode})`,
+                            ),
+                        );
+                    }
+                } else {
+                    resolve(response);
+                }
+            });
+        } else {
+            http.get(image, (response) => {
+                if (response.statusCode !== 200) {
+                    if (response.statusCode === 302) {
+                        console.debug(
+                            "Redirecting to:",
+                            response.headers.location as string,
+                        );
+                        resolve(
+                            this.getImageStream(
+                                response.headers.location as string,
+                            ),
+                        );
+                    } else {
+                        reject(
+                            new Error(
+                                `Failed to get '${image}' (${response.statusCode})`,
+                            ),
+                        );
+                    }
+                } else {
+                    resolve(response);
+                }
+            });
+        }
+        });
+    }
+    async uploadImage(image: string) {
+        console.debug("start uploading image:", image);
+        const stream = await this.getImageStream(image);
+        console.debug("stream is ready");
+        if (stream instanceof Readable) {
+            let uploadedImage = await this.client.assets.upload("image", stream);
+            console.debug("uploadedImage is ready");
+            return this.createImageReference(uploadedImage);
+        } else {
+            return new Error("Failed to get image stream");
+        }
+    }
+    async createImageReference(image: any) {
+        if(image._id){
+            return {
+                _type: "image",
+                asset: {
+                    _type: "reference",
+                    _ref: image._id,
+                },
+            };
+        } else {
+            return new Error("Image ID is not present");
+        }
+    }
 }
-
 export default SanityModuleService;
-export { ProductTransformer, CategoryTransformer, VariantTransformer, type SyncTransformer };

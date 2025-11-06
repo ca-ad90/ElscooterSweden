@@ -20,5 +20,5 @@ export default async function upsertSanityProduct({
 }
 
 export const config: SubscriberConfig = {
-    event: ["product.created", "product.updated"],
+    event: ["product.created", "product.updated",],
 };

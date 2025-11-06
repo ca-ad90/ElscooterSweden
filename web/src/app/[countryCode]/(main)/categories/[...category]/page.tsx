@@ -26,7 +26,7 @@ export async function generateStaticParams() {
     regions?.map((r) => r.countries?.map((c: any) => c.iso_2)).flat()
   )
 
-  const categoryHandles = product_categories.map((category) => category.slug).filter(Boolean)
+  const categoryHandles = product_categories.map((category: { slug?: string }) => category.slug).filter(Boolean)
 
   const staticParams = countryCodes
     ?.map((countryCode: string | undefined) =>

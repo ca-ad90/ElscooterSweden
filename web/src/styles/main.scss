@@ -5,41 +5,41 @@
 // This is the only file that should be compiled to CSS.
 
 // 1. SETTINGS: Raw variables, maps, and settings.
-@import "variables";
+@use "variables" as *;
 
 // 2. TOOLS: Functions and mixins that require variables.
-@import "functions";
+@use "functions" as *;
 
 // 3. DEFINITIONS: Global @keyframes.
-@import "animations";
+@use "animations" as *;
 
 // 4. TOOLS (continued): Mixins that may depend on keyframes.
-@import "mixins";
+@use "mixins" as *;
 
 // 5. GENERIC: Reset and/or normalize styles.
-@import "reset";
+@use "reset" as *;
 
 // 6. THEME: CSS Variables for light/dark theming.
-@import "theme";
+@use "theme" as *;
 
 // 7. BASE: Base HTML element styles (h1, p, a, etc.).
-@import "typography";
+@use "typography" as *;
 
 // 8. LAYOUT: Global layout helper classes (.page-container, etc.).
-@import "layout";
+@use "layout" as *;
 
 // 9. UTILITIES: Utility classes (.flow, .anim-fade-in, etc.).
 // (Note: _flow.scss is a utility file)
-@import "flow";
+@use "flow" as *;
 
 // 10. COMPONENTS: (Optional)
 // If you have SCSS for complex components that Tailwind can't
 // easily style (e.g., a complex date picker), you would
 // import them last.
-// @import 'components/date-picker';
-// @import 'components/slider';
-@import "globals";
-@import "components/navbar";
+// @use 'components/date-picker' as *;
+// @use 'components/slider' as *;
+@use "globals" as *;
+@use "components/navbar" as *;
 #hero-container {
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0), 25%, rgba(0, 0, 0, 0), 75%, rgba(83, 37, 0, 0.75));
   #myVideo {
@@ -85,7 +85,9 @@
 
   }
 }
-
+main{
+margin-top: 100px;
+}
 
 @keyframes rotateAnimation {
 from {

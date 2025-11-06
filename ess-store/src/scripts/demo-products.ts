@@ -1,5 +1,5 @@
 import { ExecArgs } from "@medusajs/framework/types";
-
+import readline from "readline";
 import {
     ContainerRegistrationKeys,
     Modules,
@@ -12,255 +12,450 @@ import {
     createProductTypesWorkflow,
 } from "@medusajs/medusa/core-flows";
 import { sanitySyncProductsWorkflow } from "../workflows/sanity-sync-products";
-import { sanitySyncCategoriesWorkflow } from "../workflows/sanity-sync-categories";
-import { sanitySyncVariantsWorkflow } from "../workflows/sanity-sync-variants";
-function rnd(min: number, max: number) {
+
+interface ProductOptionsConfig {
+    variantsCount: number;
+    currencyCode?: string;
+}
+
+interface ProductGenerationContext {
+    faker: any;
+    index: number;
+    salesChannelId: string;
+    shippingProfileId?: string;
+    categoryIds: string[];
+    typeId?: string;
+    config: ProductOptionsConfig;
+}
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const DEFAULT_PRODUCT_TYPES = ["Electric Bikes", "Electric Scooters"];
+const DEFAULT_CATEGORY_NAMES = ["Main", "Tillbehör", "Kläder", "Saker"];
+const DEFAULT_SIZE_OPTIONS = ["S", "M", "L", "XL"];
+const DEFAULT_COLOR_OPTION_VALUES = [
+    "Black",
+    "White",
+    "Red",
+    "Blue",
+    "Green",
+    "Yellow",
+    "Orange",
+    "Purple",
+    "Pink",
+    "Brown",
+    "Gray",
+    "Silver",
+    "Gold",
+];
+const DEFAULT_TASTE_OPTIONS = ["Sweet", "Salty", "Sour", "Bitter", "Umami"];
+const DEFAULT_LOCKED_OPTIONS = ["true", "false"];
+const DEFAULT_CURRENCY_CODE = "sek";
+const DEFAULT_STOCKED_QUANTITY = 11;
+const SYNC_DELAY_MS = 10000;
+function rnd(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-export default async function seedDummyProducts({ container }: ExecArgs) {
-    const { faker } = await import("@faker-js/faker");
-    const salesChannelModuleService = container.resolve(Modules.SALES_CHANNEL);
-    const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
-    const query = container.resolve(ContainerRegistrationKeys.QUERY);
 
-    const defaultSalesChannel =
-        await salesChannelModuleService.listSalesChannels({
-            name: "Default Sales Channel",
-        });
-
-    const productTypes = ["Electric Bikes", "Electric Scooters"];
-
-    async function listProductTypes() {
-        try {
-            const { data: types } = await query.graph({
-                entity: "product_type",
-                fields: ["id", "value"],
-            });
-            return types || [];
-        } catch {
-            return [];
-        }
-    }
-
-    const currentProductTypes = await listProductTypes();
-    let productTypesResult = currentProductTypes;
-    const newProductTypes = productTypes.filter(
-        (type) => !currentProductTypes.some((t) => t.value === type)
+function prompt(question: string): Promise<string> {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+    });
+    return new Promise((resolve) =>
+        rl.question(question, (answer) => {
+            rl.close();
+            resolve(answer);
+        }),
     );
-    if (newProductTypes.length > 0) {
-        const { result: newTypesResult } = await createProductTypesWorkflow(container).run({
-            input: {
-                product_types: newProductTypes.map((type) => ({
-                    name: type,
-                    value: type,
-                })),
-            },
-        });
-        productTypesResult.push(...newTypesResult);
-    }
+}
 
-    async function listCategories() {
-        const { data: categories } = await query.graph({
-            entity: "product_categories",
-            fields: ["id", "name"],
-        });
-        return categories;
-    }
+function getRandomColors(count: number = 5): string[] {
+    const shuffled = [...DEFAULT_COLOR_OPTION_VALUES].sort(
+        () => Math.random() - 0.5,
+    );
+    return shuffled.slice(0, count);
+}
+export default async function seedDummyStore({ container }: ExecArgs) {
+    const productModuleService = container.resolve(Modules.PRODUCT);
+    const fulfillmentModuleService = container.resolve(Modules.FULFILLMENT);
+    const stockLocationModuleService = container.resolve(
+        Modules.STOCK_LOCATION,
+    );
+    const salesChannelModuleService = container.resolve(Modules.SALES_CHANNEL);
 
-    const categoryNames = ["Main", "Tillbehör", "Kläder", "Saker"];
-    const currentCategories = await listCategories();
-    let categoryResults = currentCategories;
-        const newCategories = categoryNames.filter((category) => !currentCategories.some((c) => c.name === category));
-       if(newCategories.length > 0) {
-        const { result: newCategoriesResult } = await createProductCategoriesWorkflow(container).run({
-            input: {
-                product_categories: newCategories.map((category) => ({
-                    name: category,
-                })),
-            },
-        });
-        categoryResults.push(...newCategoriesResult);
+    let [productTypesResult, productCategoriesResult, [, productCount]] =
+        await Promise.all([
+            productModuleService.listProductTypes(),
+            productModuleService.listProductCategories(),
+            productModuleService.listAndCountProducts(),
+        ]);
 
-        // Sync new categories to Sanity
-        logger.info("Syncing new categories to Sanity...");
-        await sanitySyncCategoriesWorkflow(container).run({
-            input: {
-                category_ids: newCategoriesResult.map(c => c.id),
-            },
-        });
-        logger.info("Finished syncing categories to Sanity.");
-    }
+    let UploadedProductTypes = await productModuleService.createProductTypes(
+        DEFAULT_PRODUCT_TYPES.filter(
+            (type) => !productTypesResult.some((t) => t.value === type),
+        ).map((type) => ({ value: type })),
+    );
+    let UploadedProductCategories =
+        await productModuleService.createProductCategories(
+            DEFAULT_CATEGORY_NAMES.filter(
+                (category) =>
+                    !productCategoriesResult.some((c) => c.name === category),
+            ).map((category) => ({ name: category })),
+        );
 
+    let productCategories = [
+        ...productCategoriesResult.map((category) => ({
+            id: category.id,
+            name: category.name,
+        })),
+        ...UploadedProductCategories.map((category) => ({
+            id: category.id,
+            name: category.name,
+        })),
+    ];
+    let productTypes = [
+        ...productTypesResult.map((type) => ({
+            id: type.id,
+            value: type.value,
+        })),
+        ...UploadedProductTypes.map((type) => ({
+            id: type.id,
+            value: type.value,
+        })),
+    ];
 
-
-
-    const sizeOptions = ["S", "M", "L", "XL"];
-    const colorOptionValues = ["Black", "White", "Red", "Blue", "Green", "Yellow", "Orange", "Purple", "Pink", "Brown", "Gray", "Silver", "Gold"];
-    const tasteOptions = ["Sweet", "Salty", "Sour", "Bitter", "Umami"];
-    const lockedOptions = ["true", "false"];
-    const colorOptions = () => {
-        // Pick 5 different random colors
-        const shuffled = [...colorOptionValues].sort(() => Math.random() - 0.5);
-        return shuffled.slice(0, 5);
-    };
-    const currency_code = "sek";
-    const productsNum = 5;
-    const variantsNum = 3;
-
-    async function generateProduct(index: number) {
-        const title = faker.commerce.product() + "_" + index;
-        const description = faker.commerce.productDescription();
-        const status = ProductStatus.PUBLISHED;
-        // Try to use an existing shipping profile if available
-        let shipping_profile_id: string | undefined = undefined;
-        // safe best-effort fetch; ignore errors if entity not present
-        try {
-            // @ts-ignore - entity name used by Medusa query engine
-            const { data: shippingProfiles } = await query.graph({
-                entity: "shipping_profile",
-                fields: ["id"],
+    async function setupStockLocations() {
+        let stockLocations;
+        const stockLocationsResult =
+            await stockLocationModuleService.listStockLocations({
+                name: "Default Stock Location",
             });
-            if (shippingProfiles?.length) {
-                shipping_profile_id = shippingProfiles[0].id;
-            }
-        } catch {
-            // ignore and proceed without shipping_profile_id
+        if (!stockLocationsResult.length) {
+            stockLocations =
+                await stockLocationModuleService.createStockLocations([
+                    { name: "Default Stock Location" },
+                ]);
+        } else {
+            stockLocations = stockLocationsResult[0];
         }
-        const sales_channels = [
-            {
-                id: defaultSalesChannel[0].id,
-            },
-        ]
-        const images = [
-            {
-                url: faker.image.url({}),
-            },
-            {
-                url: faker.image.url({}),
-            },
-        ]
+        return { id: stockLocations.id };
+    }
+    async function setupShippingProfiles() {
+        let shippingProfiles;
+        const shippingProfilesResult =
+            await fulfillmentModuleService.listShippingProfiles({
+                name: "Default Shipping Profile",
+            });
+        if (!shippingProfilesResult.length) {
+            shippingProfiles =
+                await fulfillmentModuleService.createShippingProfiles([
+                    { name: "Default Shipping Profile", type: "default" },
+                ]);
+        } else {
+            shippingProfiles = shippingProfilesResult[0];
+        }
+        return { id: shippingProfiles.id };
+    }
+  async function setupSalesChannel(container: any): Promise<{ id: string }> {
+        let salesChannel;
+        const salesChannelResult =
+            await salesChannelModuleService.listSalesChannels({
+                name: "Default Sales Channel",
+            });
 
-        const allOptionsPool = [
-            { title: "Size", values: sizeOptions },
-            { title: "Color", values: colorOptions() },
-            { title: "Taste", values: tasteOptions },
-            { title: "Locked", values: lockedOptions },
-        ];
-        const optionCount = Math.max(1, Math.min(3, Math.floor(Math.random() * 3) + 1));
-        const productOptions = [...allOptionsPool];
-        while (productOptions.length > optionCount) {
-            productOptions.splice(Math.floor(Math.random() * productOptions.length), 1);
+        if (!salesChannelResult?.[0]) {
+            salesChannel = await salesChannelModuleService.createSalesChannels([
+                { name: "Default Sales Channel" },
+            ]);
+        } else {
+            salesChannel = salesChannelResult;
         }
+        return { id: salesChannel[0].id };
+    }
+    function generateProductOptions(): Array<{
+        title: string;
+        values: string[];
+    }> {
+        const allOptionsPool = [
+            { title: "Size", values: DEFAULT_SIZE_OPTIONS },
+            { title: "Color", values: getRandomColors() },
+            { title: "Taste", values: DEFAULT_TASTE_OPTIONS },
+            { title: "Locked", values: DEFAULT_LOCKED_OPTIONS },
+        ];
+
+        const optionCount = Math.max(
+            1,
+            Math.min(3, Math.floor(Math.random() * 3) + 1),
+        );
+        const productOptions = [...allOptionsPool];
+
+        while (productOptions.length > optionCount) {
+            productOptions.splice(
+                Math.floor(Math.random() * productOptions.length),
+                1,
+            );
+        }
+
+        return productOptions;
+    }
+    function generateProductMetadata(faker: any): Record<string, any> {
+        return {
+            specs: {
+                Batterikapacitet: rnd(100, 1000) + "mAh",
+                Motorstyrka: rnd(500, 1000) + "W",
+                Hjulstorlek: rnd(16, 22) + "inch",
+                Rammaterial: faker.commerce.productMaterial(),
+                Fjädringstyp: ["Hardtail", "Softtail", "Full Suspension"][
+                    rnd(0, 2)
+                ],
+                Bromstyp: ["Disk", "Våd", "Tråd"][rnd(0, 2)],
+                Räckvidd: rnd(100, 1000) + "km",
+                Toppfart: rnd(20, 25) + "km/h",
+                Maxvikt: rnd(100, 1000) + "kg",
+                Hopfällbar: ["true", "false"][rnd(0, 1)],
+                Antal_växlar: rnd(1, 10),
+                Displaytyp: ["LED", "LCD", "OLED"][rnd(0, 2)],
+                Däcktyp: ["Kardan", "Kardan", "Kardan"][rnd(0, 2)],
+            },
+        };
+    }
+    function generateProductVariants(
+        title: string,
+        index: number,
+        productOptions: Array<{ title: string; values: string[] }>,
+        variantsCount: number,
+        currencyCode: string = DEFAULT_CURRENCY_CODE,
+    ) {
         const pickVariantOptions = () => {
             const selected: Record<string, string> = {};
             productOptions.forEach((opt) => {
-                selected[opt.title] = opt.values[Math.floor(Math.random() * opt.values.length)];
+                selected[opt.title] =
+                    opt.values[Math.floor(Math.random() * opt.values.length)];
             });
             return selected;
         };
-            const variants = new Array(variantsNum).fill(0).map((_, variantIndex) => {
+
+        return new Array(variantsCount).fill(0).map((_, variantIndex) => {
             const variantOptions = pickVariantOptions();
             return {
                 title: `${title} ${variantIndex}`,
                 sku: `variant-${variantIndex}${index}`,
                 prices: [
-                    { currency_code, amount: rnd(1000, 50000) },
+                    { currency_code: currencyCode, amount: rnd(1000, 50000) },
                 ],
                 options: variantOptions,
             };
         });
+    }
+    async function generateProduct(context: ProductGenerationContext) {
+        const {
+            faker,
+            index,
+            salesChannelId,
+            shippingProfileId,
+            categoryIds,
+            typeId,
+            config,
+        } = context;
+        const { variantsCount, currencyCode = DEFAULT_CURRENCY_CODE } = config;
 
-        const category_ids = categoryResults.map((category) => category.id);
-        const type_id =
-            productTypesResult.length > 0
-                ? productTypesResult[Math.floor(Math.random() * productTypesResult.length)].id
-                : undefined;
+        const title = faker.commerce.product() + "_" + index;
+        const description = faker.commerce.productDescription();
+        const productOptions = generateProductOptions();
+        const variants = generateProductVariants(
+            title,
+            index,
+            productOptions,
+            variantsCount,
+            currencyCode,
+        );
+        const metadata = generateProductMetadata(faker);
 
         return {
             title,
             description,
-            status,
-            shipping_profile_id,
-            sales_channels,
-            images,
+            status: ProductStatus.PUBLISHED,
+            shipping_profile_id: shippingProfileId,
+            sales_channels: [{ id: salesChannelId }],
+            images: [
+                { url: faker.image.url({}) },
+                { url: faker.image.url({}) },
+            ],
             options: productOptions,
             variants,
-            category_ids,
-            type_id,
-            metadata: {
-                specs: {
-                    Batterikapacitet: rnd(100, 1000) + "mAh",
-                    Motorstyrka: rnd(500, 1000) + "W",
-                    Hjulstorlek: rnd(16, 22) + "inch",
-                    Rammaterial: faker.commerce.productMaterial(),
-                    Fjädringstyp: ["Hardtail", "Softtail", "Full Suspension"][rnd(0, 2)],
-                    Bromstyp: ["Disk", "Våd", "Tråd"][rnd(0, 2)],
-                    Räckvidd: rnd(100, 1000) + "km",
-                    Toppfart: rnd(20, 25) + "km/h",
-                    Maxvikt: rnd(100, 1000) + "kg",
-                    Hopfällbar: ["true", "false"][rnd(0, 1)],
-                    Antal_växlar: rnd(1, 10),
-                    Displaytyp: ["LED", "LCD", "OLED"][rnd(0, 2)],
-                    Däcktyp: ["Kardan", "Kardan", "Kardan"][rnd(0, 2)],
-                },
-            },
-        }
-}
-    const productsData = await Promise.all(new Array(productsNum).fill(0).map(async (_, index) => await generateProduct(index)));
+            category_ids: categoryIds,
+            type_id: typeId,
+            metadata,
+        };
+    }
+    async function generateProducts(
+        faker: any,
+        count: number,
+        startIndex: number,
+        salesChannelId: string,
+        shippingProfileId: string | undefined,
+        categoryIds: string[],
+        typeId: string | undefined,
+        config: ProductOptionsConfig,
+    ): Promise<any[]> {
+        const contexts = new Array(count).fill(0).map((_, i) => ({
+            faker,
+            index: startIndex + i,
+            salesChannelId,
+            shippingProfileId,
+            categoryIds,
+            typeId,
+            config,
+        }));
 
-
-    const { result: products } = await createProductsWorkflow(container).run({
-        input: {
-            products: productsData,
-        },
-    });
-
-    logger.info(`Seeded ${products.length} products.`);
-
-    // Sync products and variants to Sanity
-    logger.info("Syncing products to Sanity...");
-    await sanitySyncProductsWorkflow(container).run({
-        input: {
-            product_ids: products.map(p => p.id),
-        },
-    });
-    logger.info("Finished syncing products to Sanity.");
-
-    // Sync variants to Sanity (extract variant IDs from created products)
-    logger.info("Syncing variants to Sanity...");
-    const variantIds = products.flatMap(p => p.variants?.map(v => v.id) || []);
-    if (variantIds.length > 0) {
-        await sanitySyncVariantsWorkflow(container).run({
-            input: {
-                variant_ids: variantIds,
-            },
-        });
-        logger.info("Finished syncing variants to Sanity.");
+        return Promise.all(contexts.map((ctx) => generateProduct(ctx)));
     }
 
-    logger.info("Seeding inventory levels.");
+    // ============================================================================
+    // Workflow Functions
+    // ============================================================================
 
-    const { data: stockLocations } = await query.graph({
-        entity: "stock_location",
-        fields: ["id"],
-    });
+    async function createProducts(
+        productsData
+    ): Promise<any[]> {
+        const products = await productModuleService.createProducts(productsData);
+        return products;
+    }
 
-    const { data: inventoryItems } = await query.graph({
-        entity: "inventory_item",
-        fields: ["id"],
-    });
+    async function syncProductsToSanity(
+        container: any,
+        productIds: string[],
+        delayMs: number = SYNC_DELAY_MS,
+    ): Promise<number> {
+        // Wait to ensure all database transactions are committed
+        await new Promise((resolve) =>
+            setTimeout(() => resolve(true), delayMs),
+        );
 
-    const inventoryLevels = inventoryItems.map((inventoryItem) => ({
-        location_id: stockLocations[0].id,
-        stocked_quantity: 11,
-        inventory_item_id: inventoryItem.id,
-    }));
+        const { result } = await sanitySyncProductsWorkflow(container).run({
+            input: { product_ids: productIds },
+        });
 
-    await createInventoryLevelsWorkflow(container).run({
-        input: {
-            inventory_levels: inventoryLevels,
-        },
-    });
+        return result?.total || 0;
+    }
 
-    logger.info("Finished seeding inventory levels data.");
+    async function seedInventoryLevels(
+        container: any,
+        query: any,
+        products: any[],
+        stockedQuantity: number = DEFAULT_STOCKED_QUANTITY,
+    ): Promise<void> {
+        const variantSkus = products.flatMap(
+            (p) => p.variants?.map((v: any) => v.sku) || [],
+        );
+        const variantInventoryItems = await getInventoryItemsBySku(
+            query,
+            variantSkus,
+        );
+        const stockLocations = await getStockLocations(query);
+
+        if (!stockLocations.length) {
+            throw new Error("No stock locations found");
+        }
+
+        const inventoryLevels = variantInventoryItems.map((inventoryItem) => ({
+            location_id: stockLocations[0].id,
+            stocked_quantity: stockedQuantity,
+            inventory_item_id: inventoryItem.id,
+        }));
+
+        await createInventoryLevelsWorkflow(container).run({
+            input: { inventory_levels: inventoryLevels },
+        });
+    }
+
+    // ============================================================================
+    // Main Function
+    // ============================================================================
+
+    async function MainFunction({ container }: ExecArgs) {
+        const { faker } = await import("@faker-js/faker");
+        const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
+        const query = container.resolve(ContainerRegistrationKeys.QUERY);
+
+        // Setup
+        logger.info("Setting up sales channel...");
+        const salesChannel = await setupSalesChannel(container);
+
+        logger.info("Ensuring product types exist...");
+        const productTypesResult = await ensureProductTypes(container, query);
+
+        logger.info("Ensuring product categories exist...");
+        const categoryResults = await ensureProductCategories(container, query);
+
+        // Get user input
+        const productsNum =
+            Number(
+                await prompt(
+                    "How many demo products do you want to create? (default: 1): ",
+                ),
+            ) || 1;
+        const variantsNum =
+            Number(
+                await prompt("How many variants per product? (default: 3): "),
+            ) || 3;
+
+        // Get existing products count
+        const existingProductsCount = await getExistingProductsCount(query);
+        logger.info(
+            `There are currently ${existingProductsCount} products in the database.`,
+        );
+
+        // Get additional context
+        const shippingProfileId = await getShippingProfileId(query);
+        const categoryIds = categoryResults.map((category) => category.id);
+        const typeId =
+            productTypesResult.length > 0
+                ? productTypesResult[
+                      Math.floor(Math.random() * productTypesResult.length)
+                  ].id
+                : undefined;
+
+        // Generate products
+        logger.info(`Generating ${productsNum} products...`);
+        const productsData = await generateProducts(
+            faker,
+            productsNum,
+            existingProductsCount + 1,
+            salesChannel.id,
+            shippingProfileId,
+            categoryIds,
+            typeId,
+            { variantsCount: variantsNum },
+        );
+
+        // Create products
+        logger.info("Creating products...");
+        const products = await createProducts(container, productsData);
+        logger.info(`Seeded ${products.length} products.`);
+
+        // Sync to Sanity
+        logger.info("Syncing products to Sanity...");
+        try {
+            const productIds = products.map((p) => p.id);
+            const syncedCount = await syncProductsToSanity(
+                container,
+                productIds,
+            );
+            logger.info(
+                `Successfully synced ${syncedCount} products to Sanity.`,
+            );
+        } catch (error) {
+            logger.error(`Error syncing products to Sanity:`, error);
+            throw error;
+        }
+
+        // Seed inventory
+        logger.info("Seeding inventory levels...");
+        await seedInventoryLevels(container, query, products);
+        logger.info("Finished seeding inventory levels data.");
+    }
 }

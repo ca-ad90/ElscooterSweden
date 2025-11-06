@@ -1,3 +1,6 @@
+@use "variables" as *;
+@use "functions" as *;
+@use "sass:map";
 
 // 4. TOOLS / MIXINS
 // Reusable blocks of styles.
@@ -7,8 +10,8 @@
 // Mobile-first media query mixin.
 // @include respond(md) { ...styles }
 @mixin respond($bp) {
-  @if map-has-key($breakpoints, $bp) {
-    @media (min-width: map-get($breakpoints, $bp)) {
+  @if map.has-key($breakpoints, $bp) {
+    @media (min-width: map.get($breakpoints, $bp)) {
       @content;
     }
   } @else {
